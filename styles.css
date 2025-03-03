@@ -74,10 +74,17 @@ button:hover {
     background-color: rgba(0, 255, 0, 0.1);
 }
 
+/* 情報項目容器 */
+.intelligence-item-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
 .intelligence-item {
+    flex: 1;
     border: 1px solid #0f0;
     padding: 1rem;
-    margin-bottom: 1rem;
     cursor: pointer;
     transition: background-color 0.3s;
 }
@@ -89,6 +96,47 @@ button:hover {
 .intelligence-item::before {
     content: '>';
     margin-right: 1rem;
+}
+
+/* 刪除按鈕 */
+.delete-btn {
+    background-color: transparent;
+    border: 1px solid #f00;
+    color: #f00;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 0.5rem;
+    padding: 0;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.delete-btn:hover {
+    background-color: rgba(255, 0, 0, 0.2);
+}
+
+/* 詳情視圖中的刪除按鈕 */
+.detail-delete-btn {
+    background-color: transparent;
+    border: 1px solid #f00;
+    color: #f00;
+    margin-left: 1rem;
+    transition: all 0.3s;
+}
+
+.detail-delete-btn:hover {
+    background-color: rgba(255, 0, 0, 0.2);
+}
+
+/* 返回按鈕容器 */
+.back-button {
+    display: flex;
+    margin-bottom: 1rem;
 }
 
 /* Detail view */
