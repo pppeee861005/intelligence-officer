@@ -3,55 +3,528 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>情報官</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>B2 Boss Timer</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            background-color: #f0f2f5;
+            touch-action: manipulation;
+            padding-bottom: 20px;
+        }
+        
+        /* 移動端優化 */
+        @media (max-width: 640px) {
+            .button-text {
+                font-size: 1.2rem;
+            }
+            
+            .boss-button {
+                height: 70px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+        }
+        
+        /* 主按鈕樣式 */
+        .main-button {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+        
+        .boss-list {
+            font-size: 1.1rem;
+        }
+        
+        .boss-time {
+            font-size: 1rem;
+        }
+        
+        /* 當前時間顯示 */
+        .current-time {
+            position: fixed;
+            top: 0;
+            right: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-bottom-left-radius: 8px;
+            font-size: 0.9rem;
+            z-index: 100;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>情報官</h1>
-            <div class="subtitle">TOP SECRET</div>
-        </header>
+    <div id="root"></div>
 
-        <main id="app">
-            <!-- 列表視圖 -->
-            <div id="list-view">
-                <div class="action-bar">
-                    <button id="add-btn">+ 添加新情報</button>
-                </div>
-                <div id="intelligence-list"></div>
-            </div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
 
-            <!-- 詳情視圖 -->
-            <div id="detail-view" class="hidden">
-                <div class="back-button">
-                    <button id="back-btn">&laquo; 返回</button>
-                </div>
-                <div id="detail-date" class="mb-2"></div>
-                <div id="detail-content"></div>
-            </div>
+        const App = () => {
+            const [bossList, setBossList] = useState([]);
+            const [showModal, setShowModal] = useState(false);
+            const [showBossList, setShowBossList] = useState(false);
+            const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
+            const [showManualModal, setShowManualModal] = useState(false);
+            const [selectedBoss, setSelectedBoss] = useState(null);
+            const [timeInput, setTimeInput] = useState('');
+            const [timeError, setTimeError] = useState('');
+            const [serverRestarted, setServerRestarted] = useState(false);
+            
+            // 更新當前時間
+            useEffect(() => {
+                const timer = setInterval(() => {
+                    setCurrentTime(new Date().toLocaleTimeString());
+                }, 1000);
+                
+                return () => clearInterval(timer);
+            }, []);
+            
+            // 初始化30個BOSS名稱
+            const BOSS_NAMES = [
+                "不死鳥", "伊弗利特", "大腳瑪幽", "巨大飛龍", "77左(下)飛龍",
+                "74小飛龍", "76飛龍", "77右(上)飛龍", "大黑長者", "巨大鱷魚",
+                "巨型蠕蟲", "變形怪首領", "強盜頭目", "小綠", "小紅",
+                "蜘蛛", "樹精", "四色", "守護螞蟻", "死亡騎士",
+                "力卡溫", "魔法師", "巴風特", "卡司特", "克特",
+                "古代巨人", "惡魔監視者", "曼波兔王", "暗黑大將軍貝里斯", "賽尼斯的分身"
+            ];
+            
+            // BOSS重生時間（毫秒）
+            const BOSS_RESPAWN_TIMES = {
+                "不死鳥": 8 * 60 * 60 * 1000,
+                "伊弗利特": 2 * 60 * 60 * 1000,
+                "大腳瑪幽": 3 * 60 * 60 * 1000,
+                "巨大飛龍": 6 * 60 * 60 * 1000,
+                "77左(下)飛龍": 2 * 60 * 60 * 1000,
+                "74小飛龍": 3 * 60 * 60 * 1000,
+                "76飛龍": 3 * 60 * 60 * 1000,
+                "77右(上)飛龍": 2 * 60 * 60 * 1000,
+                "大黑長者": 3 * 60 * 60 * 1000,
+                "巨大鱷魚": 3 * 60 * 60 * 1000,
+                "巨型蠕蟲": 2 * 60 * 60 * 1000,
+                "變形怪首領": (3 * 60 + 30) * 60 * 1000, // 3小時30分
+                "強盜頭目": 3 * 60 * 60 * 1000,
+                "小綠": 2 * 60 * 60 * 1000,
+                "小紅": 2 * 60 * 60 * 1000,
+                "蜘蛛": 4 * 60 * 60 * 1000,
+                "樹精": 3 * 60 * 60 * 1000,
+                "四色": 2 * 60 * 60 * 1000,
+                "守護螞蟻": (3 * 60 + 30) * 60 * 1000, // 3小時30分
+                "死亡騎士": 9 * 60 * 60 * 1000,
+                "力卡溫": 8 * 60 * 60 * 1000,
+                "魔法師": 2 * 60 * 60 * 1000,
+                "巴風特": 6 * 60 * 60 * 1000,
+                "卡司特": (7 * 60 + 30) * 60 * 1000, // 7小時30分
+                "克特": 5 * 60 * 60 * 1000,
+                "古代巨人": (8 * 60 + 30) * 60 * 1000, // 8小時30分
+                "惡魔監視者": 6 * 60 * 60 * 1000,
+                "曼波兔王": 3 * 60 * 60 * 1000,
+                "暗黑大將軍貝里斯": 6 * 60 * 60 * 1000,
+                "賽尼斯的分身": 3 * 60 * 60 * 1000
+            };
 
-            <!-- 添加表單 -->
-            <div id="add-view" class="hidden">
-                <div class="back-button">
-                    <button id="cancel-btn">&laquo; 返回</button>
-                </div>
-                <h2>添加新情報</h2>
-                <form id="add-form">
-                    <div class="form-group">
-                        <label for="date-input">日期 (YYYY-MM-DD):</label>
-                        <input type="text" id="date-input" placeholder="例如: 2025-03-03" pattern="\d{4}-\d{2}-\d{2}" required>
+            // 格式化重生時間顯示
+            const formatRespawnPeriod = (bossName) => {
+                const milliseconds = BOSS_RESPAWN_TIMES[bossName] || 4 * 60 * 60 * 1000;
+                const hours = Math.floor(milliseconds / (60 * 60 * 1000));
+                const minutes = Math.floor((milliseconds % (60 * 60 * 1000)) / (60 * 1000));
+                
+                if (minutes === 0) {
+                    return `${hours}小時`;
+                } else {
+                    return `${hours}小時${minutes}分`;
+                }
+            };
+
+            useEffect(() => {
+                // 從localStorage讀取數據
+                const savedData = localStorage.getItem('bossData');
+                if (savedData) {
+                    setBossList(JSON.parse(savedData));
+                }
+            }, []);
+
+            // 保存數據到localStorage
+            const saveToLocalStorage = (data) => {
+                localStorage.setItem('bossData', JSON.stringify(data));
+            };
+
+            // 模擬伺服器重開
+            const simulateServerRestart = () => {
+                if (window.confirm('確定要標記伺服器重開嗎？')) {
+                    setServerRestarted(true);
+                    
+                    // 如果當前未顯示 Boss 列表，自動顯示
+                    if (!showBossList) {
+                        setShowBossList(true);
+                    }
+                }
+            };
+            
+            // 記錄BOSS死亡時間
+            const recordDeathTime = (bossName, customTime = null) => {
+                const deathTime = customTime || new Date();
+                const newBossList = [...bossList];
+                const existingIndex = newBossList.findIndex(boss => boss.name === bossName);
+                
+                if (existingIndex !== -1) {
+                    newBossList[existingIndex].deathTime = deathTime.toISOString();
+                } else {
+                    newBossList.push({
+                        name: bossName,
+                        deathTime: deathTime.toISOString()
+                    });
+                }
+                
+                setBossList(newBossList);
+                saveToLocalStorage(newBossList);
+                setShowModal(false);
+                setShowManualModal(false);
+                setSelectedBoss(null);
+                setTimeInput('');
+                setTimeError('');
+                
+                // 記錄新時間時，如果伺服器重啟標記為真，則重置它
+                if (serverRestarted) {
+                    setServerRestarted(false);
+                }
+            };
+            
+            // 處理手動輸入時間
+            const handleManualTimeSubmit = () => {
+                if (timeInput.length !== 6) {
+                    setTimeError('請輸入6位數時間 (HHMMSS)');
+                    return;
+                }
+                
+                const hours = parseInt(timeInput.substring(0, 2));
+                const minutes = parseInt(timeInput.substring(2, 4));
+                const seconds = parseInt(timeInput.substring(4, 6));
+                
+                // 驗證時間格式
+                if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59 || seconds < 0 || seconds > 59) {
+                    setTimeError('時間格式不正確 (小時:0-23, 分鐘/秒:0-59)');
+                    return;
+                }
+                
+                // 創建日期對象（今天的日期 + 輸入的時間）
+                const today = new Date();
+                const deathTime = new Date(
+                    today.getFullYear(),
+                    today.getMonth(),
+                    today.getDate(),
+                    hours,
+                    minutes,
+                    seconds
+                );
+                
+                recordDeathTime(selectedBoss, deathTime);
+            };
+            
+            // 處理時間輸入變化
+            const handleTimeInputChange = (e) => {
+                const value = e.target.value;
+                // 只允許數字
+                if (/^\d*$/.test(value) && value.length <= 6) {
+                    setTimeInput(value);
+                    setTimeError('');
+                }
+            };
+            
+            // 格式化顯示時間輸入
+            const formatTimeDisplay = (input) => {
+                if (!input) return '--:--:--';
+                
+                let formatted = input;
+                if (input.length > 4) {
+                    formatted = `${input.substring(0, 2)}:${input.substring(2, 4)}:${input.substring(4)}`;
+                } else if (input.length > 2) {
+                    formatted = `${input.substring(0, 2)}:${input.substring(2)}`;
+                }
+                
+                // 填充剩餘位置
+                while (formatted.length < 8) {
+                    if (formatted.endsWith(':')) {
+                        formatted += '-';
+                    } else if (formatted.length === 2 || formatted.length === 5) {
+                        formatted += ':';
+                    } else {
+                        formatted += '-';
+                    }
+                }
+                
+                return formatted;
+            };
+
+            // 計算預計重生時間
+            const calculateRespawnTime = (deathTime, bossName) => {
+                const death = new Date(deathTime);
+                const respawnTime = BOSS_RESPAWN_TIMES[bossName] || 4 * 60 * 60 * 1000; // 默認4小時
+                return new Date(death.getTime() + respawnTime);
+            };
+            
+            // 計算剩餘時間
+            const calculateTimeRemaining = (respawnTime) => {
+                const now = new Date();
+                const diff = respawnTime - now;
+                
+                if (diff <= 0) return "已重生";
+                
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                
+                if (hours > 0) {
+                    return `剩餘 ${hours}小時${minutes > 0 ? ` ${minutes}分` : ''}`;
+                } else {
+                    return `剩餘 ${minutes}分鐘`;
+                }
+            };
+            
+            // 獲取時間狀態
+            const getTimeStatus = (respawnTime) => {
+                const now = new Date();
+                const diff = respawnTime - now;
+                
+                if (diff <= 0) return "已重生";
+                if (diff <= 30 * 60 * 1000) return "即將重生"; // 30分鐘內
+                if (diff <= 60 * 60 * 1000) return "即將重生"; // 1小時內
+                return "正常";
+            };
+
+            // 獲取排序後的BOSS列表
+            const getSortedBossList = () => {
+                return [...bossList].sort((a, b) => {
+                    const timeA = calculateRespawnTime(a.deathTime, a.name);
+                    const timeB = calculateRespawnTime(b.deathTime, b.name);
+                    return timeA - timeB;
+                });
+            };
+
+            return (
+                <div className="min-h-screen bg-gray-100 p-4 pt-8">
+                    {/* 當前時間顯示 */}
+                    <div className="current-time">
+                        {currentTime}
                     </div>
-                    <div class="form-group">
-                        <label for="content-input">內容:</label>
-                        <textarea id="content-input" rows="4" required></textarea>
+                    
+                    <h1 className="text-2xl font-bold text-center mb-6">B2 出王表</h1>
+                    
+                    <div className="flex flex-col gap-4">
+                        {/* 伺服器重啟通知 */}
+                        {serverRestarted && (
+                            <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-2 relative rounded">
+                                <p className="font-bold">伺服器已重啟！</p>
+                                <p>所有 Boss 已重生，請重新記錄時間。</p>
+                                <button 
+                                    onClick={() => setServerRestarted(false)} 
+                                    className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        )}
+                    
+                        {/* 五個主要按鈕 - 直式排列 */}
+                        <div className="flex flex-col gap-3 mb-2">
+                            <button
+                                onClick={() => setShowModal(true)}
+                                className="bg-blue-500 text-white p-5 rounded-lg shadow button-text font-bold main-button"
+                            >
+                                記錄時間
+                            </button>
+                            <button
+                                onClick={() => setShowManualModal(true)}
+                                className="bg-purple-500 text-white p-5 rounded-lg shadow button-text font-bold main-button"
+                            >
+                                手動輸入
+                            </button>
+                            <button
+                                onClick={() => setShowBossList(!showBossList)}
+                                className="bg-green-500 text-white p-5 rounded-lg shadow button-text font-bold main-button"
+                            >
+                                查詢重生
+                            </button>
+                            <button
+                                onClick={simulateServerRestart}
+                                className="bg-orange-500 text-white p-5 rounded-lg shadow button-text font-bold main-button"
+                            >
+                                伺服器重開
+                            </button>
+                            <button
+                                onClick={() => window.open('https://pppeee861005.github.io/intelligence-officer/', '_blank')}
+                                className="bg-indigo-500 text-white p-5 rounded-lg shadow button-text font-bold main-button"
+                            >
+                                情報官
+                            </button>
+                        </div>
+                        
+                        {/* 只有當 showBossList 為 true 時才顯示 BOSS 列表 */}
+                        {showBossList && (
+                            <div className="bg-white rounded-lg shadow p-4 mt-4">
+                                <h2 className="text-xl font-bold mb-4">BOSS出現時間</h2>
+                                {getSortedBossList().length > 0 ? (
+                                    getSortedBossList().map((boss, index) => {
+                                        const respawnTime = calculateRespawnTime(boss.deathTime, boss.name);
+                                        const timeStatus = getTimeStatus(respawnTime);
+                                        const timeRemaining = calculateTimeRemaining(respawnTime);
+                                        
+                                        return (
+                                            <div key={index} className="border-b py-3">
+                                                <div className="flex justify-between items-center">
+                                                    <p className="font-bold boss-list">{boss.name}</p>
+                                                    <span className={`text-sm font-bold px-2 py-1 rounded ${
+                                                        timeStatus === "已重生" ? "bg-red-100 text-red-700" :
+                                                        timeStatus === "即將重生" ? "bg-yellow-100 text-yellow-700" :
+                                                        "bg-green-100 text-green-700"
+                                                    }`}>
+                                                        {timeRemaining}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between items-center mt-1">
+                                                    <span className="text-sm text-gray-500">({formatRespawnPeriod(boss.name)})</span>
+                                                    <p className="text-gray-600 boss-time text-sm">
+                                                        {respawnTime.toLocaleString()}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                ) : (
+                                    <p className="text-gray-500 text-center py-4">尚未記錄任何 BOSS 死亡時間</p>
+                                )}
+                            </div>
+                        )}
                     </div>
-                    <button type="submit">添加情報</button>
-                </form>
-            </div>
-        </main>
-    </div>
 
-    <script src="script.js"></script>
+                    {/* BOSS選擇彈窗 - 自動記錄當前時間 */}
+                    {showModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-lg p-4 w-full max-w-md max-h-[80vh] overflow-y-auto">
+                                <h2 className="text-xl font-bold mb-4">選擇BOSS</h2>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {BOSS_NAMES.map((name) => (
+                                        <button
+                                            key={name}
+                                            onClick={() => recordDeathTime(name)}
+                                            className="bg-gray-200 p-2 rounded text-left boss-button"
+                                        >
+                                            <div className="font-bold">{name}</div>
+                                            <div className="text-xs text-gray-500">{formatRespawnPeriod(name)}</div>
+                                        </button>
+                                    ))}
+                                </div>
+                                <button
+                                    onClick={() => setShowModal(false)}
+                                    className="mt-4 bg-red-500 text-white p-2 rounded w-full"
+                                >
+                                    取消
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* 手動輸入時間彈窗 - 第一步：選擇BOSS */}
+                    {showManualModal && !selectedBoss && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-lg p-4 w-full max-w-md max-h-[80vh] overflow-y-auto">
+                                <h2 className="text-xl font-bold mb-4">選擇BOSS</h2>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {BOSS_NAMES.map((name) => (
+                                        <button
+                                            key={name}
+                                            onClick={() => setSelectedBoss(name)}
+                                            className="bg-gray-200 p-2 rounded text-left boss-button"
+                                        >
+                                            <div className="font-bold">{name}</div>
+                                            <div className="text-xs text-gray-500">{formatRespawnPeriod(name)}</div>
+                                        </button>
+                                    ))}
+                                </div>
+                                <button
+                                    onClick={() => setShowManualModal(false)}
+                                    className="mt-4 bg-red-500 text-white p-2 rounded w-full"
+                                >
+                                    取消
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* 手動輸入時間彈窗 - 第二步：輸入時間 */}
+                    {showManualModal && selectedBoss && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-lg p-4 w-full max-w-md">
+                                <h2 className="text-xl font-bold mb-2">輸入時間</h2>
+                                <p className="text-gray-600 mb-4">為 <span className="font-bold">{selectedBoss}</span> 輸入死亡時間</p>
+                                
+                                <div className="mb-4">
+                                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                                        時間格式：HHMMSS（例如：123456 表示 12:34:56）
+                                    </label>
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        value={timeInput}
+                                        onChange={handleTimeInputChange}
+                                        className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-center text-xl"
+                                        placeholder="HHMMSS"
+                                    />
+                                    <div className="text-center mt-2 text-2xl font-mono">
+                                        {formatTimeDisplay(timeInput)}
+                                    </div>
+                                    {timeError && (
+                                        <p className="text-red-500 text-sm mt-2">{timeError}</p>
+                                    )}
+                                </div>
+                                
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => {
+                                            setSelectedBoss(null);
+                                            setTimeInput('');
+                                            setTimeError('');
+                                        }}
+                                        className="bg-gray-500 text-white p-2 rounded w-1/2"
+                                    >
+                                        返回
+                                    </button>
+                                    <button
+                                        onClick={handleManualTimeSubmit}
+                                        className="bg-blue-500 text-white p-2 rounded w-1/2"
+                                        disabled={timeInput.length !== 6}
+                                    >
+                                        確認
+                                    </button>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        setShowManualModal(false);
+                                        setSelectedBoss(null);
+                                        setTimeInput('');
+                                        setTimeError('');
+                                    }}
+                                    className="mt-2 bg-red-500 text-white p-2 rounded w-full"
+                                >
+                                    取消
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
 </body>
 </html>
