@@ -192,3 +192,78 @@ input:focus, textarea:focus {
     animation: blink 1s step-end infinite;
     margin-left: 2px;
 }
+
+/* 待審核項目樣式 */
+.pending-item {
+    border-color: #ff9900 !important;
+}
+
+.pending-badge {
+    display: inline-block;
+    background-color: #ff9900;
+    color: #000;
+    font-size: 0.7rem;
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+}
+
+.pending-indicator {
+    background-color: rgba(255, 153, 0, 0.2);
+    border-left: 3px solid #ff9900;
+    color: #ff9900;
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+/* 數據來源通知 */
+.data-source-notice {
+    background-color: rgba(0, 255, 0, 0.1);
+    border: 1px solid #0f0;
+    padding: 0.5rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    font-size: 0.8rem;
+}
+
+/* 加載指示器 */
+.loading-indicator {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: #0f0;
+    text-align: center;
+    padding: 1rem;
+    z-index: 1000;
+    animation: blink 1s step-end infinite;
+}
+
+/* 頁腳樣式 */
+.footer {
+    margin-top: 3rem;
+    border-top: 1px solid rgba(0, 255, 0, 0.3);
+    padding-top: 1rem;
+    font-size: 0.8rem;
+}
+
+.footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.admin-link {
+    color: rgba(0, 255, 0, 0.5);
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.admin-link:hover {
+    color: #0f0;
+}

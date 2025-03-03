@@ -69,20 +69,91 @@ const contentInput = document.getElementById('content-input');
 
 // 當前數據
 let intelligenceData = [];
+let isDataLoading = false;
+let lastUpdated = null;
+
+// 從 GitHub 獲取數據
+async function fetchDataFromGitHub() {
+    try {
+        isDataLoading = true;
+        
+        // 顯示加載指示器
+        const loadingIndicator = document.createElement('div');
+        loadingIndicator.id = 'loading-indicator';
+        loadingIndicator.className = 'loading-indicator';
+        loadingIndicator.textContent = '正在從伺服器獲取情報數據...';
+        document.body.appendChild(loadingIndicator);
+        
+        // 使用 raw.githubusercontent.com 獲取原始 JSON 數據
+        // 添加時間戳參數避免緩存
+        const response = await fetch(
+            'https://raw.githubusercontent.com/pppeee861005/intelligence-officer/main/data/intelligence.json?t=' + Date.now()
+        );
+        
+        if (!response.ok) {
+            throw new Error('無法獲取數據');
+        }
+        
+        const data = await response.json();
+        lastUpdated = data.lastUpdated;
+        
+        // 移除加載指示器
+        document.body.removeChild(loadingIndicator);
+        isDataLoading = false;
+        
+        return data.items;
+    } catch (error) {
+        console.error('獲取數據失敗:', error);
+        
+        // 移除加載指示器
+        const loadingIndicator = document.getElementById('loading-indicator');
+        if (loadingIndicator) {
+            document.body.removeChild(loadingIndicator);
+        }
+        
+        isDataLoading = false;
+        
+        // 如果獲取失敗，回退到本地存儲的數據
+        const savedData = localStorage.getItem('intelligenceData');
+        return savedData ? JSON.parse(savedData) : initialData;
+    }
+}
 
 // 初始化應用
-function initApp() {
-    // 從 localStorage 讀取數據，如果沒有則使用初始數據
-    const savedData = localStorage.getItem('intelligenceData');
-    if (savedData) {
-        intelligenceData = JSON.parse(savedData);
-    } else {
-        intelligenceData = [...initialData];
-        saveToLocalStorage();
+async function initApp() {
+    try {
+        // 從 GitHub 獲取數據
+        const remoteData = await fetchDataFromGitHub();
+        intelligenceData = remoteData;
+        
+        // 同時保存到本地，作為離線備份
+        localStorage.setItem('intelligenceData', JSON.stringify(remoteData));
+        
+        // 添加數據來源通知
+        if (lastUpdated) {
+            const dataSourceNotice = document.createElement('div');
+            dataSourceNotice.className = 'data-source-notice';
+            dataSourceNotice.innerHTML = `<p>數據來自共享資料庫，最後更新: ${new Date(lastUpdated).toLocaleString()}</p>`;
+            document.querySelector('.container').insertBefore(dataSourceNotice, document.querySelector('main'));
+        }
+        
+        renderIntelligenceList();
+        setupEventListeners();
+    } catch (error) {
+        console.error('初始化應用失敗:', error);
+        
+        // 如果獲取失敗，回退到本地存儲的數據
+        const savedData = localStorage.getItem('intelligenceData');
+        if (savedData) {
+            intelligenceData = JSON.parse(savedData);
+        } else {
+            intelligenceData = [...initialData];
+            saveToLocalStorage();
+        }
+        
+        renderIntelligenceList();
+        setupEventListeners();
     }
-
-    renderIntelligenceList();
-    setupEventListeners();
 }
 
 // 刪除情報
@@ -118,7 +189,15 @@ function renderIntelligenceList() {
         // 創建情報項目
         const itemElement = document.createElement('div');
         itemElement.className = 'intelligence-item';
-        itemElement.textContent = item.date;
+        
+        // 如果是待審核項目，添加標記
+        if (item.isPending) {
+            itemElement.classList.add('pending-item');
+            itemElement.innerHTML = `${item.date} <span class="pending-badge">待審核</span>`;
+        } else {
+            itemElement.textContent = item.date;
+        }
+        
         itemElement.dataset.id = item.id;
         
         // 創建刪除按鈕
@@ -189,8 +268,26 @@ function setupEventListeners() {
 function showDetail(id) {
     const item = intelligenceData.find(item => item.id === id);
     if (item) {
+        // 設置日期和內容
         detailDate.textContent = item.date;
         detailContent.textContent = item.content;
+        
+        // 如果是待審核項目，添加標記
+        const pendingIndicator = detailView.querySelector('.pending-indicator');
+        if (item.isPending) {
+            // 如果沒有待審核指示器，創建一個
+            if (!pendingIndicator) {
+                const indicator = document.createElement('div');
+                indicator.className = 'pending-indicator';
+                indicator.textContent = '此情報正在等待管理員審核，僅您可見';
+                detailView.insertBefore(indicator, detailContent);
+            } else {
+                pendingIndicator.style.display = 'block';
+            }
+        } else if (pendingIndicator) {
+            // 如果不是待審核項目但有指示器，隱藏它
+            pendingIndicator.style.display = 'none';
+        }
         
         // 檢查是否已經有刪除按鈕
         let deleteBtn = detailView.querySelector('.detail-delete-btn');
@@ -239,14 +336,26 @@ function addIntelligence() {
     const content = contentInput.value.trim();
     
     if (date && content) {
+        // 創建新情報項目
         const newItem = {
             id: Date.now().toString(),
             date,
-            content
+            content,
+            isPending: true // 標記為待審核
         };
         
+        // 顯示提交成功消息
+        alert('您的情報已提交！管理員審核後將添加到共享數據庫。\n\n在審核期間，您可以在本地查看此情報。');
+        
+        // 添加到本地數據並保存
         intelligenceData.push(newItem);
         saveToLocalStorage();
+        
+        // 發送情報到管理員（這裡只是模擬，實際上需要後端支持）
+        // 在實際應用中，這裡可以添加代碼將情報發送到管理員的郵箱或其他通知系統
+        console.log('待審核情報:', newItem);
+        
+        // 重新渲染列表並返回列表視圖
         renderIntelligenceList();
         showList();
     }
